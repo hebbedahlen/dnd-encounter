@@ -16,7 +16,7 @@ const EncounterContext = createContext<EncounterContextT>({ encounters: [] })
 
 export const useEncounters = () => useContext(EncounterContext)
 
-export const EncounterProvider = ({ children }) => {
+const EncounterProvider = ({ children }) => {
   const [encounters, setEncounters] = useState<EncounterT[]>([])
 
   return (
@@ -25,3 +25,5 @@ export const EncounterProvider = ({ children }) => {
     </EncounterContext.Provider>
   )
 }
+
+export default EncounterProvider
