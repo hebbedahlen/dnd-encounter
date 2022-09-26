@@ -2,7 +2,9 @@ import { useContext, useState } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import { useEncounters } from './encounterContext'
-import { EncounterT } from '../../models'
+import { GridT, IterableGridT } from '../../models'
+import { createUUID } from '../../helpers'
+import styles from '../../styles/Create.module.css'
 
 export default function Create() {
   const router = useRouter()
@@ -15,7 +17,7 @@ export default function Create() {
 
   const onCreateEncounter = () => {
     const newEncounter = {
-      id: '1',
+      id: createUUID(),
       name: encounterName,
       numberOfPlayers,
       players,
@@ -23,6 +25,49 @@ export default function Create() {
     }
     setEncounters([...encounters, newEncounter])
     router.push('/')
+  }
+
+  const createGrid = () => {
+    const rows = [...Array.from(Array(dimensions.rows)).keys()]
+    const columns = [...Array.from(Array(dimensions.columns)).keys()]
+
+    const grid: GridT = rows.reduce((currentRows, row) => {
+      return {
+        ...currentRows,
+        [row]: {
+          tiles: columns.reduce((currentColumns, column) => {
+            return {
+              ...currentColumns,
+              [column]: {
+                id: row.toString() + column.toString(),
+              },
+            }
+          }, {}),
+        },
+      }
+    }, {})
+
+    const iterableGrid: IterableGridT = Object.values(grid)
+
+    console.log(grid)
+
+    return (
+      <table>
+        <tbody>
+          {iterableGrid.map((row, rowNumber) => {
+            return (
+              <tr key={rowNumber}>
+                {Object.values(row.tiles).map((tile, tileNumber) => (
+                  <td key={tile.id} className={styles['grid-cell']}>
+                    {tile.id}
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    )
   }
 
   return (
@@ -80,6 +125,7 @@ export default function Create() {
               />
             </div>
           ))}
+      {dimensions.rows && dimensions.columns && createGrid()}
       <button onClick={onCreateEncounter}>Create</button>
     </Layout>
   )

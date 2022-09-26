@@ -19,3 +19,21 @@ export type EncounterT = {
   numberOfPlayers: number
   dimensions: DimensionsT
 }
+
+export interface TileT {
+  id: string
+}
+
+interface TilesT {
+  [columnNumber: number]: TileT
+}
+
+export interface RowT {
+  tiles: TilesT
+}
+
+export interface GridT {
+  [rowNumber: number]: RowT
+}
+
+export type IterableGridT = Array<RowT>
