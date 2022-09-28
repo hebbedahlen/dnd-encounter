@@ -29,16 +29,30 @@ export default function Create() {
   const [encounterName, setEncounterName] = useState('')
   const [dimensions, setDimensions] = useState({ rows: 0, columns: 0 })
   const [numberOfPlayers, setNumberOfPlayers] = useState(0)
-  const [selectedTile, setSelectedTile] = useState(null)
+  const [selectedTiles, setSelectedTiles] = useState([])
   const [players, setPlayers] = useState({})
   const [tileColor, setSelectedTileColor] = useState('#000')
   const [grid, setGrid] = useState<Grid2T>([])
+  const [shiftDown, setShiftDown] = useState(false)
+  const [controlDown, setControlDown] = useState(false)
 
   useEffect(() => {
     setGrid(createGrid(dimensions))
   }, [dimensions])
 
-  console.log('grid', grid)
+  useEffect(() => {
+    document.addEventListener('keydown', onHandleKeyDown)
+    document.addEventListener('keyup', onHandleKeyUp)
+    return () => {
+      document.removeEventListener('keydown', onHandleKeyDown)
+      document.removeEventListener('keyup', onHandleKeyUp)
+    }
+  }, [])
+
+  console.log(
+    'selectedTiles',
+    selectedTiles.map((tile) => tile.id)
+  )
 
   const onCreateEncounter = () => {
     const newEncounter = {
@@ -52,17 +66,46 @@ export default function Create() {
     router.push('/')
   }
 
-  const onTileClick = ({ row, column }) => {
-    console.log({ row, column })
-    console.log('grid', grid)
-
+  const onSelectedTileClick = ({ row, column }) => {
     const tile = grid[row][column]
-    console.log(tile)
-    setSelectedTile(tile)
+    console.log('onSelectedTileClick', tile)
+
+    if (selectedTiles.find(({ id }) => id === tile.id)) {
+      setSelectedTiles(selectedTiles.filter(({ id }) => id !== tile.id))
+      return
+    }
+  }
+
+  const onTileClick = ({ row, column }) => {
+    const tile = grid[row][column]
+    console.log('onTileClick', tile)
+
+    if (shiftDown) {
+      setSelectedTiles([...selectedTiles, tile])
+      return
+    }
+
+    setSelectedTiles([tile])
   }
 
   const onChangeTileColor = (event) => {
     setSelectedTileColor(event.target.value)
+  }
+
+  const onSetMultiTileColor = () => {
+    const updatedGrid = grid.map((row) =>
+      row.map((tile) => {
+        if (selectedTiles.find(({ id }) => id === tile.id)) {
+          return {
+            ...tile,
+            color: tileColor,
+          }
+        }
+        return tile
+      })
+    )
+
+    setGrid(updatedGrid)
   }
 
   const onSetTileColor = (rowNumber: number, tileNumber: number) => {
@@ -90,6 +133,26 @@ export default function Create() {
     if (n > 0 && n <= 100) {
       const newDimensions = { ...dimensions, [type]: n }
       setDimensions(newDimensions)
+    }
+  }
+
+  const onHandleKeyDown = (event) => {
+    console.log('keyDown', event.key)
+    if (event.key === 'Shift') {
+      setShiftDown(true)
+    }
+    if (event.key === 'Control') {
+      setControlDown(true)
+    }
+  }
+
+  const onHandleKeyUp = (event) => {
+    console.log('keyUp', event.key)
+    if (event.key === 'Shift') {
+      setShiftDown(false)
+    }
+    if (event.key === 'Control') {
+      setControlDown(false)
     }
   }
 
@@ -148,6 +211,20 @@ export default function Create() {
               />
             </div>
           ))}
+      {selectedTiles.length > 1 && (
+        <>
+          <input
+            type="color"
+            name=""
+            id=""
+            onInput={onChangeTileColor}
+            value={tileColor}
+          />
+          <button onClick={onSetMultiTileColor}>Change color</button>
+          <button>Set Enemy</button>
+          <button onClick={() => setSelectedTiles([])}>Unselect</button>
+        </>
+      )}
       {dimensions.rows && dimensions.columns && (
         <table>
           <tbody>
@@ -155,23 +232,32 @@ export default function Create() {
               return (
                 <tr key={rowNumber}>
                   {row.map((tile, tileNumber) => {
-                    if (tile === selectedTile) {
+                    if (selectedTiles.find(({ id }) => id === tile.id)) {
                       return (
                         <td
                           key={tile.id}
                           style={{ backgroundColor: tile.color }}
                           className={styles['grid-cell-selected']}
+                          onClick={() =>
+                            onSelectedTileClick({
+                              row: rowNumber,
+                              column: tileNumber,
+                            })
+                          }
                         >
                           <input
                             type="color"
+                            value={tileColor}
                             name=""
                             id=""
                             onInput={onChangeTileColor}
+                            onClick={(event) => event.stopPropagation()}
                           />
                           <button
-                            onClick={() =>
+                            onClick={(event) => {
+                              event.stopPropagation()
                               onSetTileColor(rowNumber, tileNumber)
-                            }
+                            }}
                           >
                             Change color
                           </button>
