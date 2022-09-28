@@ -1,10 +1,27 @@
-import { useContext, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import { useEncounters } from './encounterContext'
-import { GridT, IterableGridT } from '../../models'
+import { DimensionsT, TileT } from '../../models'
 import { createUUID } from '../../helpers'
 import styles from '../../styles/Create.module.css'
+
+type Row2T = TileT[]
+type Grid2T = Row2T[]
+
+const createGrid = (dimensions: DimensionsT): Grid2T => {
+  const rows = [...Array.from(Array(dimensions.rows)).keys()]
+  const columns = [...Array.from(Array(dimensions.columns)).keys()]
+
+  const grid = rows.map((rowNumber) => {
+    return columns.map((columnNumber) => ({
+      id: rowNumber.toString() + columnNumber.toString(),
+      color: '#000',
+    }))
+  })
+
+  return grid
+}
 
 export default function Create() {
   const router = useRouter()
@@ -12,8 +29,16 @@ export default function Create() {
   const [encounterName, setEncounterName] = useState('')
   const [dimensions, setDimensions] = useState({ rows: 0, columns: 0 })
   const [numberOfPlayers, setNumberOfPlayers] = useState(0)
-
+  const [selectedTile, setSelectedTile] = useState(null)
   const [players, setPlayers] = useState({})
+  const [tileColor, setSelectedTileColor] = useState('#000')
+  const [grid, setGrid] = useState<Grid2T>([])
+
+  useEffect(() => {
+    setGrid(createGrid(dimensions))
+  }, [dimensions])
+
+  console.log('grid', grid)
 
   const onCreateEncounter = () => {
     const newEncounter = {
@@ -27,47 +52,45 @@ export default function Create() {
     router.push('/')
   }
 
-  const createGrid = () => {
-    const rows = [...Array.from(Array(dimensions.rows)).keys()]
-    const columns = [...Array.from(Array(dimensions.columns)).keys()]
+  const onTileClick = ({ row, column }) => {
+    console.log({ row, column })
+    console.log('grid', grid)
 
-    const grid: GridT = rows.reduce((currentRows, row) => {
-      return {
-        ...currentRows,
-        [row]: {
-          tiles: columns.reduce((currentColumns, column) => {
-            return {
-              ...currentColumns,
-              [column]: {
-                id: row.toString() + column.toString(),
-              },
-            }
-          }, {}),
-        },
-      }
-    }, {})
+    const tile = grid[row][column]
+    console.log(tile)
+    setSelectedTile(tile)
+  }
 
-    const iterableGrid: IterableGridT = Object.values(grid)
+  const onChangeTileColor = (event) => {
+    setSelectedTileColor(event.target.value)
+  }
 
-    console.log(grid)
+  const onSetTileColor = (rowNumber: number, tileNumber: number) => {
+    const tileToUpdate = grid[rowNumber][tileNumber]
+    const updatedTile = {
+      ...tileToUpdate,
+      color: tileColor,
+    }
 
-    return (
-      <table>
-        <tbody>
-          {iterableGrid.map((row, rowNumber) => {
-            return (
-              <tr key={rowNumber}>
-                {Object.values(row.tiles).map((tile, tileNumber) => (
-                  <td key={tile.id} className={styles['grid-cell']}>
-                    {tile.id}
-                  </td>
-                ))}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    console.log('tileToUpdate', tileToUpdate)
+
+    const updatedGrid = grid.map((row) =>
+      row.map((tile) => {
+        if (tile.id === tileToUpdate.id) {
+          return updatedTile
+        }
+        return tile
+      })
     )
+
+    setGrid(updatedGrid)
+  }
+
+  const onSetDimensions = (type: 'rows' | 'columns', n: number) => {
+    if (n > 0 && n <= 100) {
+      const newDimensions = { ...dimensions, [type]: n }
+      setDimensions(newDimensions)
+    }
   }
 
   return (
@@ -89,7 +112,7 @@ export default function Create() {
         min="1"
         max="100"
         onChange={(event) =>
-          setDimensions({ ...dimensions, rows: event.target.valueAsNumber })
+          onSetDimensions('rows', event.target.valueAsNumber)
         }
       />
       <label htmlFor="rows">Dimensions Columns</label>
@@ -99,7 +122,7 @@ export default function Create() {
         min="1"
         max="100"
         onChange={(event) =>
-          setDimensions({ ...dimensions, columns: event.target.valueAsNumber })
+          onSetDimensions('columns', event.target.valueAsNumber)
         }
       />
       <label htmlFor="numberOfPlayers">Number of players (1-5)</label>
@@ -125,7 +148,57 @@ export default function Create() {
               />
             </div>
           ))}
-      {dimensions.rows && dimensions.columns && createGrid()}
+      {dimensions.rows && dimensions.columns && (
+        <table>
+          <tbody>
+            {grid.map((row, rowNumber) => {
+              return (
+                <tr key={rowNumber}>
+                  {row.map((tile, tileNumber) => {
+                    if (tile === selectedTile) {
+                      return (
+                        <td
+                          key={tile.id}
+                          style={{ backgroundColor: tile.color }}
+                          className={styles['grid-cell-selected']}
+                        >
+                          <input
+                            type="color"
+                            name=""
+                            id=""
+                            onInput={onChangeTileColor}
+                          />
+                          <button
+                            onClick={() =>
+                              onSetTileColor(rowNumber, tileNumber)
+                            }
+                          >
+                            Change color
+                          </button>
+                          <button>Set Player</button>
+                          <button>Set Enemy</button>
+                        </td>
+                      )
+                    }
+                    return (
+                      <td
+                        key={tile.id}
+                        style={{ backgroundColor: tile.color }}
+                        className={styles['grid-cell']}
+                        onClick={() =>
+                          onTileClick({ row: rowNumber, column: tileNumber })
+                        }
+                      >
+                        {tile.id}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
       <button onClick={onCreateEncounter}>Create</button>
     </Layout>
   )

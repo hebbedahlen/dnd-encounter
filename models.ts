@@ -21,6 +21,7 @@ export type EncounterT = {
 }
 
 export interface TileT {
+  color: string
   id: string
 }
 
@@ -29,7 +30,7 @@ interface TilesT {
 }
 
 export interface RowT {
-  tiles: TilesT
+  [columnNumber: number]: TileT
 }
 
 export interface GridT {
